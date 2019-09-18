@@ -438,7 +438,7 @@ function JSONStringify(object) {
 function initLocalRecorder(streamId) {
     if (streamId && window.subscriberStreams) {
         for (let stream of window.subscriberStreams) {
-            if (stream.id === streamId) {
+            if (stream.streamId === streamId) {
                 var localRecorder = window.OpenVidu.initLocalRecorder(stream);
                 window['localRecorders'].push(localRecorder);
                 return localRecorder.id;
