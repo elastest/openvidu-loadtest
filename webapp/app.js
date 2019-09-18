@@ -48,10 +48,10 @@ function joinSession() {
     session.on('streamCreated', (event) => {
         appendEvent({ event: 'streamCreated', content: event.stream.streamId });
         var streamSubscriber = event.stream;
-        if (streamSubscriber) {
-            streamSubscriber.streamManager = undefined;
-            window['streams'].push(streamSubscriber);
-        }
+        streamSubscriber.streamManager = undefined;
+        console.log('New event stream created: {}', streamSubscriber);
+        window['streams'].push(streamSubscriber);
+
         var subscriber = session.subscribe(event.stream, insertSubscriberContainer(event));
         subscriber.on('streamPlaying', (e) => {
             appendEvent({ event: 'streamPlaying', content: event.stream.streamId });
