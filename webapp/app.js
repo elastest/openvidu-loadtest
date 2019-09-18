@@ -48,8 +48,7 @@ function joinSession() {
     session.on('streamCreated', (event) => {
         appendEvent({ event: 'streamCreated', content: event.stream.streamId });
         var streamSubscriber = JSON.stringify(event.stream, function(key, value) {
-            console.log('aaaaaaaaaa', key);
-            if (key == 'streamManager') {
+            if (key == 'streamManager' || key == 'streamManagers') {
                 return null;
             } else {
                 return value;
