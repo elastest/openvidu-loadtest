@@ -38,12 +38,16 @@ function joinSession() {
 	OV = new OpenVidu();
 	session = OV.initSession();
 
+	window['OpenVidu'] = OV;
+	window['streams'] = [];
+
 	session.on("connectionCreated", event => {
 		appendEvent({ event: "connectionCreated", content: event.connection.connectionId });
 	});
 
 	session.on("streamCreated", event => {
 		appendEvent({ event: "streamCreated", content: event.stream.streamId });
+		window['streams'].push(event.stream);
 		var subscriber = session.subscribe(event.stream, insertSubscriberContainer(event));
 		subscriber.on("streamPlaying", e => {
 			appendEvent({ event: "streamPlaying", content: event.stream.streamId });
