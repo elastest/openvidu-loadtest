@@ -47,8 +47,13 @@ function joinSession() {
 
     session.on('streamCreated', (event) => {
         appendEvent({ event: 'streamCreated', content: event.stream.streamId });
-        var streamSubscriber = event.stream;
-        streamSubscriber.streamManager = undefined;
+        var streamSubscriber = JSON.stringify(event.stream, function(key, value) {
+            if (key == 'streamManager') {
+                return null;
+            } else {
+                return value;
+            }
+        });
         console.log('New event stream created: {}', streamSubscriber);
         window['streams'].push(streamSubscriber);
 
