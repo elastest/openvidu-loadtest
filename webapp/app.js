@@ -47,14 +47,7 @@ function joinSession() {
 
     session.on('streamCreated', (event) => {
         appendEvent({ event: 'streamCreated', content: event.stream.streamId });
-        console.log('1', event.stream);
-        var streamSubscriber = JSON.stringify(event.stream, function(key, value) {
-            if (key == 'streamManager' || key == 'streamManagers' || key == 'session' || key == 'stream') {
-                return null;
-            } else {
-                return value;
-            }
-        });
+        var streamSubscriber = JSONStringify(event.stream);
         console.log('New event stream created: {}', streamSubscriber);
         window['streams'].push(streamSubscriber);
 
@@ -417,4 +410,26 @@ function gatherStatsForPeer(rtcPeerConnection, userId, isSubscriber, errorCallba
         null,
         errorCallback,
     );
+
+    function JSONStringify(object) {
+        var cache = [];
+        var str = JSON.stringify(
+            object,
+            // custom replacer fxn - gets around "TypeError: Converting circular structure to JSON"
+            function(key, value) {
+                if (typeof value === 'object' && value !== null) {
+                    if (cache.indexOf(value) !== -1) {
+                        // Circular reference found, discard key
+                        return;
+                    }
+                    // Store value in our collection
+                    cache.push(value);
+                }
+                return value;
+            },
+            4,
+        );
+        cache = null; // enable garbage collection
+        return str;
+    }
 }
