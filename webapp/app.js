@@ -39,7 +39,9 @@ function joinSession() {
     session = OV.initSession();
 
     window['OpenVidu'] = OV;
-    window['streams'] = [];
+    window['subscriberStreams'] = [];
+    window['subscriberStreamIds'] = [];
+    window['localRecorders'] = [];
 
     session.on('connectionCreated', (event) => {
         appendEvent({ event: 'connectionCreated', content: event.connection.connectionId });
@@ -47,9 +49,8 @@ function joinSession() {
 
     session.on('streamCreated', (event) => {
         appendEvent({ event: 'streamCreated', content: event.stream.streamId });
-        var streamSubscriber = JSONStringify(event.stream);
-        console.log('New event stream created: {}', streamSubscriber);
-        window['streams'].push(streamSubscriber);
+        window['subscriberStream'].push(event.stream);
+        window['subscriberStreamIds'].push(event.stream.id);
 
         var subscriber = session.subscribe(event.stream, insertSubscriberContainer(event));
         subscriber.on('streamPlaying', (e) => {
@@ -432,4 +433,49 @@ function JSONStringify(object) {
     );
     cache = null; // enable garbage collection
     return str;
+}
+
+function initLocalRecorder(streamId) {
+    if (streamId && window.subscriberStreams) {
+        for (let stream of window.subscriberStreams) {
+            if (stream.id === streamId) {
+                var localRecorder = window.OpenVidu.initLocalRecorder(stream);
+                window['localRecorders'].push(localRecorder);
+                return localRecorder.id;
+            }
+        }
+    }
+    return null;
+}
+
+function getLocalRecorderById(localRecorderId) {
+    if (localRecorderId && window.localRecorders) {
+        for (let localRecorder of window.localRecorders) {
+            if (localRecorder.id === localRecorderId) {
+                return localRecorder;
+            }
+        }
+    }
+    return null;
+}
+
+function startRecording(localRecorderId) {
+    var localRecorder = getLocalRecorderById(localRecorderId);
+    if (localRecorder) {
+        localRecorder.record();
+    }
+}
+
+function stopRecording(localRecorderId) {
+    var localRecorder = getLocalRecorderById(localRecorderId);
+    if (localRecorder) {
+        localRecorder.stop();
+    }
+}
+
+function downloadRecording(localRecorderId) {
+    var localRecorder = getLocalRecorderById(localRecorderId);
+    if (localRecorder) {
+        localRecorder.download();
+    }
 }
