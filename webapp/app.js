@@ -49,7 +49,7 @@ function joinSession() {
 
     session.on('streamCreated', (event) => {
         appendEvent({ event: 'streamCreated', content: event.stream.streamId });
-        window['subscriberStream'].push(event.stream);
+        window['subscriberStreams'].push(event.stream);
         window['subscriberStreamIds'].push(event.stream.id);
 
         var subscriber = session.subscribe(event.stream, insertSubscriberContainer(event));
