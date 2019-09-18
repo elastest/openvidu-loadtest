@@ -49,7 +49,7 @@ function joinSession() {
         appendEvent({ event: 'streamCreated', content: event.stream.streamId });
         console.log('1', event.stream);
         var streamSubscriber = JSON.stringify(event.stream, function(key, value) {
-            if (key == 'streamManager' || key == 'streamManagers' || key == 'session') {
+            if (key == 'streamManager' || key == 'streamManagers' || key == 'session' || key == 'stream') {
                 return null;
             } else {
                 return value;
