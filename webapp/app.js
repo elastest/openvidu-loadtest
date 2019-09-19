@@ -436,11 +436,13 @@ function JSONStringify(object) {
 }
 
 function initLocalRecorder(streamId) {
+    console.log('Init local recorder from streamId "' + streamId + '"');
     if (streamId && window.subscriberStreams) {
         for (let stream of window.subscriberStreams) {
             if (stream.streamId === streamId) {
                 var localRecorder = window.OpenVidu.initLocalRecorder(stream);
                 window['localRecorders'].push(localRecorder);
+                console.log('Local recorder from streamId "' + streamId + '" has been initialized with ID: ' + localRecorder.id);
                 return localRecorder.id;
             }
         }
@@ -460,22 +462,28 @@ function getLocalRecorderById(localRecorderId) {
 }
 
 function startRecording(localRecorderId) {
+    console.log('Starting recording with local recorder Id "' + localRecorderId + '"');
     var localRecorder = getLocalRecorderById(localRecorderId);
     if (localRecorder) {
         localRecorder.record();
+        console.log('Recording with local recorder Id "' + localRecorderId + '" has been started!');
     }
 }
 
 function stopRecording(localRecorderId) {
+    console.log('Stopping recording with local recorder Id "' + localRecorderId + '"');
     var localRecorder = getLocalRecorderById(localRecorderId);
     if (localRecorder) {
         localRecorder.stop();
+        console.log('Recording with local recorder Id "' + localRecorderId + '" has been stopped!');
     }
 }
 
 function downloadRecording(localRecorderId) {
+    console.log('Downloading recording with local recorder Id "' + localRecorderId + '"');
     var localRecorder = getLocalRecorderById(localRecorderId);
     if (localRecorder) {
         localRecorder.download();
+        console.log('Recording with local recorder Id "' + localRecorderId + '" has been downloaded!');
     }
 }
