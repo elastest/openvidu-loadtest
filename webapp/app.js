@@ -437,22 +437,22 @@ function JSONStringify(object) {
 
 function getSubscriberStreams() {
     var subscriberStreams = [];
-    for (let stream of window.session.streamManagers) {
-        if (stream && stream.remote) {
-            subscriberStreams.stream.id;
+    for (let streamManager of window.session.streamManagers) {
+        if (streamManager && streamManager.remote) {
+            subscriberStreams.streamManager.stream.streamId;
         }
     }
     return subscriberStreams;
 }
 
-function getViewerStreams() {
-    var viewerStreams = [];
-    for (let stream of window.session.streamManagers) {
-        if (stream && !stream.remote) {
-            viewerStreams.stream.id;
+function getPublisherStreams() {
+    var publisherStreams = [];
+    for (let streamManager of window.session.streamManagers) {
+        if (streamManager && !streamManager.remote) {
+            publisherStreams.streamManager.stream.streamId;
         }
     }
-    return viewerStreams;
+    return publisherStreams;
 }
 
 function initLocalRecorder(streamId) {
