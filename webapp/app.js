@@ -435,6 +435,26 @@ function JSONStringify(object) {
     return str;
 }
 
+function getSubscriberStreams() {
+    var subscriberStreams = [];
+    for (let stream of window.session.streamManagers) {
+        if (stream && stream.remote) {
+            subscriberStreams.stream.id;
+        }
+    }
+    return subscriberStreams;
+}
+
+function getViewerStreams() {
+    var viewerStreams = [];
+    for (let stream of window.session.streamManagers) {
+        if (stream && !stream.remote) {
+            viewerStreams.stream.id;
+        }
+    }
+    return viewerStreams;
+}
+
 function initLocalRecorder(streamId) {
     console.log('Init local recorder from streamId "' + streamId + '"');
     if (streamId && window.subscriberStreams) {
