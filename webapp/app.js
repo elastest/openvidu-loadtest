@@ -439,7 +439,7 @@ function getSubscriberStreams() {
     var subscriberStreams = [];
     for (let streamManager of window.session.streamManagers) {
         if (streamManager && streamManager.remote) {
-            subscriberStreams.streamManager.stream.streamId;
+            subscriberStreams.push(streamManager.stream.streamId);
         }
     }
     return subscriberStreams;
@@ -449,7 +449,7 @@ function getPublisherStreams() {
     var publisherStreams = [];
     for (let streamManager of window.session.streamManagers) {
         if (streamManager && !streamManager.remote) {
-            publisherStreams.streamManager.stream.streamId;
+            publisherStreams.push(streamManager.stream.streamId);
         }
     }
     return publisherStreams;
