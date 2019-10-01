@@ -453,6 +453,7 @@ function getPublisherStreams() {
 function initLocalRecorder(streamId) {
     console.log('Init local recorder from streamId "' + streamId + '"');
     if (streamId && window.session.streamManagers) {
+        console.info(JSONStringify(window.session.streamManagers));
         for (let streamManager of window.session.streamManagers) {
             if (streamManager && streamManager.stream && streamManager.stream.streamId === streamId) {
                 var localRecorder = window.OpenVidu.initLocalRecorder(streamManager.stream);
