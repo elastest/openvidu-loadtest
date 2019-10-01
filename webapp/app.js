@@ -39,8 +39,6 @@ function joinSession() {
     session = OV.initSession();
 
     window['OpenVidu'] = OV;
-    window['subscriberStreams'] = [];
-    window['subscriberStreamIds'] = [];
     window['localRecorders'] = [];
 
     session.on('connectionCreated', (event) => {
@@ -49,9 +47,6 @@ function joinSession() {
 
     session.on('streamCreated', (event) => {
         appendEvent({ event: 'streamCreated', content: event.stream.streamId });
-        window['subscriberStreams'].push(event.stream);
-        window['subscriberStreamIds'].push(event.stream.streamId);
-
         var subscriber = session.subscribe(event.stream, insertSubscriberContainer(event));
         subscriber.on('streamPlaying', (e) => {
             appendEvent({ event: 'streamPlaying', content: event.stream.streamId });
@@ -457,10 +452,10 @@ function getPublisherStreams() {
 
 function initLocalRecorder(streamId) {
     console.log('Init local recorder from streamId "' + streamId + '"');
-    if (streamId && window.subscriberStreams) {
-        for (let stream of window.subscriberStreams) {
-            if (stream.streamId === streamId) {
-                var localRecorder = window.OpenVidu.initLocalRecorder(stream);
+    if (streamId && window.session.streamManagers) {
+        for (let streamManager of window.session.streamManagers) {
+            if (streamManager && streamManager.stream && streamManager.stream.streamId === streamId) {
+                var localRecorder = window.OpenVidu.initLocalRecorder(streamManager.stream);
                 window['localRecorders'].push(localRecorder);
                 console.log('Local recorder from streamId "' + streamId + '" has been initialized with ID: ' + localRecorder.id);
                 return localRecorder.id;
