@@ -49,7 +49,7 @@ function joinSession() {
         appendEvent({ event: 'streamCreated', content: event.stream.streamId });
         var subscriber = session.subscribe(event.stream, insertSubscriberContainer(event));
         subscriber.on('streamPlaying', (e) => {
-            appendEvent({ event: 'streamPlaying', content: event.stream.streamId });
+            appendEvent({ event: 'streamPlaying', content: event.stream.streamId, date: Date.now() });
             var userId = event.stream.connection.data;
             window.openviduLoadTest.stats[userId] = [];
             lastStatGatheringTime[userId] = Date.now();
