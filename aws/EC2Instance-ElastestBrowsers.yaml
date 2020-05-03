@@ -5,6 +5,11 @@ Parameters:
   ImageId:
     Type: AWS::EC2::Image::Id
     Description: An Amazon EC2 image ID, such as ami-0ff8a91507f77f867.
+    Default: ami-03ef731cc103c9f09
+  SSHKey:
+    Type: String
+    Description: SSH key
+    Default: kms-aws-share-key
 
 Resources:
   BrowserInstance:
@@ -37,21 +42,30 @@ Resources:
                 set -eu -o pipefail
                 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
                 add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu xenial stable"
-                apt-get update 
+                apt-get update
                 apt-get install -y docker-ce
+
                 # Building custom Elastest Browser with iptables
                 TMPDIR=$(mktemp -d)
                 pushd $TMPDIR
                 docker pull elastestbrowsers/chrome:latest-2.0.0
-                wget -O Dockerfile https://raw.githubusercontent.com/OpenVidu/openvidu-loadtest/master/aws/browser-docker-image/chrome/Dockerfile 
+                wget -O Dockerfile https://raw.githubusercontent.com/OpenVidu/openvidu-loadtest/recording_loadtest/aws/browser-docker-image/chrome/Dockerfile
                 docker build -t elastestbrowsers/chrome:iptables .
                 popd
                 rm -rf $TMPDIR
+
                 # Provisioning media files
                 mkdir /opt/openvidu
-                wget -q http://public.openvidu.io/fakeaudio.wav -O /opt/openvidu/fakeaudio.wav
-                wget -q http://public.openvidu.io/fakevideo.y4m -O /opt/openvidu/fakevideo.y4m
                 chmod -R 777 /opt/openvidu
+                pushd /opt/openvidu
+                cat >url.txt<<EOF
+                http://public.openvidu.io/fakeaudio.wav
+                http://public.openvidu.io/fakevideo.y4m
+                http://public.openvidu.io/fakevideo_with_padding.y4m
+                EOF
+                cat url.txt | xargs -n 1 -P 10 wget --tries=0 --read-timeout=10
+                rm url.txt
+
                 # Adding regular user to Docker group
                 usermod -aG docker ubuntu
               mode: "000755"
@@ -70,7 +84,7 @@ Resources:
                 mkdir -p /home/ubuntu/recordings
                 chmod 777 /home/ubuntu/recordings
 
-                docker run --detach --name chrome -p 4444:4444 -p 6080:6080 -p 5900:5900 --cap-add=SYS_ADMIN --cap-add=NET_ADMIN -v /home/ubuntu/recordings:/home/ubuntu/recordings -v /opt/openvidu:/opt/openvidu elastestbrowsers/chrome:iptables
+                docker run --detach --name chrome --network=host --cap-add=SYS_ADMIN --cap-add=NET_ADMIN -v /home/ubuntu/recordings:/home/ubuntu/recordings -v /opt/openvidu:/opt/openvidu elastestbrowsers/chrome:iptables
               mode: "000755"
               owner: "root"
               group: "root"
@@ -93,11 +107,12 @@ Resources:
               group: "root"
     Properties:
       ImageId: !Ref ImageId
-      InstanceType: "t3.small"
+      InstanceType: "t3.medium"
+      KeyName: !Ref SSHKey
       Tags:
       - Key: Name
         Value: !Ref AWS::StackName
-      UserData: 
+      UserData:
         "Fn::Base64":
           !Sub |
           #!/bin/bash
@@ -109,7 +124,7 @@ Resources:
           cfn-init --region ${AWS::Region} --stack ${AWS::StackId} --resource BrowserInstance
 
           /usr/local/bin/installDocker.sh || { echo "Fail deploying docker"; exit 1; }
-          
+
           # sending the finish call
           /usr/local/bin/cfn-signal -e $? --stack ${AWS::StackId} --resource WaitCondition --region ${AWS::Region}
 
@@ -117,5 +132,5 @@ Resources:
     Type: AWS::CloudFormation::WaitCondition
     CreationPolicy:
       ResourceSignal:
-        Timeout: PT15M
+        Timeout: PT25M
         Count: 1

@@ -46,9 +46,13 @@ public class ChromeBrowser extends Browser {
 		// This flag allows to load fake media files from host
 		options.addArguments("--allow-file-access-from-files");
 		// This flag sets the video input
-		options.addArguments("--use-file-for-fake-video-capture=" + videoFileLocation);
+		//options.addArguments("--use-file-for-fake-video-capture=" + videoFileLocation);
 		// This flag sets the audio input
-		options.addArguments("--use-file-for-fake-audio-capture=" + audioFileLocation);
+		//options.addArguments("--use-file-for-fake-audio-capture=" + audioFileLocation);
+
+		options.addArguments("--disable-web-security");
+        options.addArguments("--allow-running-insecure-content");
+		options.addArguments("--ignore-certificate-errors");
 		return options;
 	}
 

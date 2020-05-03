@@ -56,6 +56,12 @@ import javax.net.ssl.SSLSession;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.google.gson.JsonPrimitive;
+
 import org.apache.commons.io.FileUtils;
 import org.junit.Assert;
 import org.junit.jupiter.api.AfterAll;
@@ -69,17 +75,13 @@ import org.openqa.selenium.interactions.Actions;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.slf4j.Logger;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import com.google.gson.JsonPrimitive;
-
 import io.github.bonigarcia.wdm.WebDriverManager;
 import io.openvidu.load.test.browser.Browser;
 import io.openvidu.load.test.browser.BrowserNotReadyException;
 import io.openvidu.load.test.browser.BrowserProperties;
 import io.openvidu.load.test.browser.BrowserProvider;
+import io.openvidu.load.test.browser.EUSBrowserProvider;
+import io.openvidu.load.test.browser.EUSRemoteBrowserProvider;
 import io.openvidu.load.test.browser.LocalBrowserProvider;
 import io.openvidu.load.test.browser.NetworkRestriction;
 import io.openvidu.load.test.browser.RemoteBrowserProvider;
@@ -96,11 +98,11 @@ import io.openvidu.load.test.utils.ZipGenerator;
  */
 @DisplayName("OpenVidu load test")
 @RunWith(JUnitPlatform.class)
-public class OpenViduLoadTest {
+public class OpenViduLoadTest extends ElastestBaseTest{
 
 	final static Logger log = getLogger(lookup().lookupClass());
 
-	public static ExecutorService browserInitializationTaskExecutor = Executors.newCachedThreadPool();;
+	public static ExecutorService browserInitializationTaskExecutor = Executors.newCachedThreadPool();
 	ScheduledThreadPoolExecutor statGatheringTaskExecutor = new ScheduledThreadPoolExecutor(
 			Runtime.getRuntime().availableProcessors() * 4);
 	final static ScheduledThreadPoolExecutor tcpdumpStopProcesses = new ScheduledThreadPoolExecutor(
@@ -121,14 +123,18 @@ public class OpenViduLoadTest {
 	public static String SERVER_SSH_USER = "ubuntu";
 	public static String SERVER_SSH_HOSTNAME;
 	public static String PRIVATE_KEY_PATH = "/opt/openvidu/testload/key.pem";
-	public static boolean REMOTE = false;
+	public static boolean REMOTE = true;
 	public static boolean BROWSER_INIT_AT_ONCE = false;
 	public static String RESULTS_PATH = "/opt/openvidu/testload";
 	public static boolean DOWNLOAD_OPENVIDU_LOGS = true;
 	public static int[] RECORD_BROWSERS;
 	public static JsonObject[] NETWORK_RESTRICTIONS_BROWSERS;
 	public static boolean TCPDUMP_CAPTURE_BEFORE_CONNECT;
-	public static int TCPDUMP_CAPTURE_TIME = 5;
+	public static int TCPDUMP_CAPTURE_TIME = 0;
+	public static int SESSION_AFTER_FULL_CPU = 0;
+	public static long SECONDS_WITH_ALL_SESSIONS_ACTIVE = 60;
+	public static double CPU_USAGE_LIMIT = 100.0;
+	public static int MS_WAIT_BETWEEN_BROWSER = 10000;
 
 	static BrowserProvider browserProvider;
 	public static Long timeTestStarted;
@@ -164,6 +170,9 @@ public class OpenViduLoadTest {
 		String networkRestrictionsBrowsers = System.getProperty("NETWORK_RESTRICTIONS_BROWSERS");
 		String tcpdumpCaptureBeforeConnect = System.getProperty("TCPDUMP_CAPTURE_BEFORE_CONNECT");
 		String tcpdumpCaptureTime = System.getProperty("TCPDUMP_CAPTURE_TIME");
+		String sessionAfterFullCpu = System.getProperty("SESSION_AFTER_FULL_CPU");
+		String secondsWithAllSessionsActive = System.getProperty("SECONDS_WITH_ALL_SESSIONS_ACTIVE");
+
 
 		if (openviduUrl != null) {
 			OPENVIDU_URL = openviduUrl;
@@ -216,6 +225,12 @@ public class OpenViduLoadTest {
 		if (tcpdumpCaptureTime != null) {
 			TCPDUMP_CAPTURE_TIME = Integer.parseInt(tcpdumpCaptureTime);
 		}
+		if (sessionAfterFullCpu != null) {
+			SESSION_AFTER_FULL_CPU = Integer.parseInt(sessionAfterFullCpu);
+		}
+		if (secondsWithAllSessionsActive != null) {
+			SECONDS_WITH_ALL_SESSIONS_ACTIVE = Integer.parseInt(secondsWithAllSessionsActive);
+		}
 
 		initializeRecordBrowsersProperty(recordBrowsers);
 		initializeNetworkRestrictionsBrowsersProperty(networkRestrictionsBrowsers);
@@ -223,7 +238,14 @@ public class OpenViduLoadTest {
 		SERVER_SSH_HOSTNAME = OpenViduLoadTest.OPENVIDU_URL.replace("https://", "").replaceAll(":[0-9]+/$", "")
 				.replaceAll("/$", "");
 
-		browserProvider = REMOTE ? new RemoteBrowserProvider() : new LocalBrowserProvider();
+		switch(System.getenv("BROWSER_MODE")){
+			case "LOCAL_BROWSER":   browserProvider = new LocalBrowserProvider(); break;
+			case "REMOTE_BROWSER":  browserProvider = new RemoteBrowserProvider(); break;
+			case "EUS_BROWSER":     browserProvider = new EUSBrowserProvider(); break;
+			case "EUS_AWS_BROWSER": browserProvider = new EUSRemoteBrowserProvider(); break;
+			default: browserProvider = new LocalBrowserProvider();
+		}
+
 		startNewSession[0] = new CustomLatch(USERS_SESSION * NUMBER_OF_POLLS);
 		lastRoundCount[0] = new CustomLatch(USERS_SESSION * NUMBER_OF_POLLS);
 
@@ -280,9 +302,11 @@ public class OpenViduLoadTest {
 				+ "Browsers networking:   " + Arrays.toString(NETWORK_RESTRICTIONS_BROWSERS)
 				+ System.getProperty("line.separator") + "Start tcpdump before connect:  "
 				+ TCPDUMP_CAPTURE_BEFORE_CONNECT + System.getProperty("line.separator") + "Tcpdump during:        "
-				+ TCPDUMP_CAPTURE_TIME + " s" + System.getProperty("line.separator") + "Is remote:             "
+				+ TCPDUMP_CAPTURE_TIME + " s" + System.getProperty("line.separator") + "Session limit after CPU is 100%: "
+				+ SESSION_AFTER_FULL_CPU + " s" + System.getProperty("line.separator") + "Is remote:             "
 				+ REMOTE + System.getProperty("line.separator") + "Results stored under:  "
-				+ OpenViduLoadTest.RESULTS_PATH + System.getProperty("line.separator")
+				+ OpenViduLoadTest.RESULTS_PATH + System.getProperty("line.separator") + "Seconds all sessions active: "
+				+ SECONDS_WITH_ALL_SESSIONS_ACTIVE + System.getProperty("line.separator")
 				+ "----------------------------------------";
 		logHelper.logTestInfo(testInfo);
 		log.info(System.getProperty("line.separator") + testInfo);
@@ -327,45 +351,45 @@ public class OpenViduLoadTest {
 			log.error("Error closing results file: {}", e.getMessage());
 		}
 
-		// Process test results
-		ResultsParser resultsParser = new ResultsParser(logHelper);
-		resultsParser.processLoadTestStats();
-		resultsParser.processTcpdumps();
+		// // Process test results
+		// ResultsParser resultsParser = new ResultsParser(logHelper);
+		// resultsParser.processLoadTestStats();
+		// resultsParser.processTcpdumps();
 
-		// Download remote result files from OpenVidu Server instance if configured
-		if (DOWNLOAD_OPENVIDU_LOGS) {
-			log.info("Test configured to download remote result files");
-			try {
-				openViduServerManager = new OpenViduServerManager();
-				openViduServerManager.downloadOpenViduKmsLogFiles();
-			} catch (InterruptedException e) {
-				log.error("Some log download thread couldn't finish in 5 minutes: {}", e.getMessage());
-			}
-			log.info("All remote files have been successfully downloaded");
-		} else {
-			log.info("Test configured to NOT download remote result files (DOWNLOAD_OPENVIDU_LOGS=false)");
-		}
+		// // Download remote result files from OpenVidu Server instance if configured
+		// if (DOWNLOAD_OPENVIDU_LOGS) {
+		// 	log.info("Test configured to download remote result files");
+		// 	try {
+		// 		openViduServerManager = new OpenViduServerManager();
+		// 		openViduServerManager.downloadOpenViduKmsLogFiles();
+		// 	} catch (InterruptedException e) {
+		// 		log.error("Some log download thread couldn't finish in 5 minutes: {}", e.getMessage());
+		// 	}
+		// 	log.info("All remote files have been successfully downloaded");
+		// } else {
+		// 	log.info("Test configured to NOT download remote result files (DOWNLOAD_OPENVIDU_LOGS=false)");
+		// }
 
-		// Close results file
-		try {
-			logHelper.closeInfoFile();
-		} catch (IOException e) {
-			log.error("Error closing results file: {}", e.getMessage());
-		}
+		// // Close results file
+		// try {
+		// 	logHelper.closeInfoFile();
+		// } catch (IOException e) {
+		// 	log.error("Error closing results file: {}", e.getMessage());
+		// }
 
-		// Copy test log file to results folder
-		try {
-			FileUtils.copyFile(new File("./logs/test.log"), new File(OpenViduLoadTest.RESULTS_PATH + "/test.log"));
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+		// // Copy test log file to results folder
+		// try {
+		// 	FileUtils.copyFile(new File("./logs/test.log"), new File(OpenViduLoadTest.RESULTS_PATH + "/test.log"));
+		// } catch (IOException e) {
+		// 	e.printStackTrace();
+		// }
 
-		// Compress result files into zip
-		try {
-			new ZipGenerator().zipFiles();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+		// // Compress result files into zip
+		// try {
+		// 	new ZipGenerator().zipFiles();
+		// } catch (IOException e) {
+		// 	e.printStackTrace();
+		// }
 
 		log.info("TEST FINISHED");
 	}
@@ -393,7 +417,7 @@ public class OpenViduLoadTest {
 		if (BROWSER_INIT_AT_ONCE) {
 			this.startSessionAllBrowsersAtOnce(1);
 		} else {
-			this.startSessionBrowserAfterBrowser(1);
+			this.startSessionBrowserAfterBrowser(1, 0);
 		}
 	}
 
@@ -402,8 +426,9 @@ public class OpenViduLoadTest {
 	 * initialization thread is in charge of running the test)
 	 **/
 
-	private void startSessionBrowserAfterBrowser(int sessionIndex) {
+	private void startSessionBrowserAfterBrowser(int sessionIndex, int sessionsAfterMaxCpu) {
 		String sessionId = "session-" + sessionIndex;
+		int actualSessionsAfterMaxCpu = sessionsAfterMaxCpu;
 		lastSession = sessionId;
 		log.info("Starting session: {}", sessionId);
 		final Collection<Runnable> threads = new ArrayList<>();
@@ -435,8 +460,21 @@ public class OpenViduLoadTest {
 		}
 		for (Runnable r : threads) {
 			browserInitializationTaskExecutor.execute(r);
+			try {
+				Thread.sleep(MS_WAIT_BETWEEN_BROWSER);
+			} catch (InterruptedException e) {
+				log.info("Waiting {} miliseconds between browsers", MS_WAIT_BETWEEN_BROWSER);
+				e.printStackTrace();
+			}
 		}
-		if (sessionIndex < SESSIONS) {
+
+		double cpuUsage = openViduServerManager.getCpuUsage();
+		log.info("CPU usage from LoadTest {}", cpuUsage);
+		if(cpuUsage > CPU_USAGE_LIMIT) {
+			actualSessionsAfterMaxCpu++;
+		}
+		log.info("Actual sessions afterMaxCPU: {}", actualSessionsAfterMaxCpu);
+		if (sessionIndex < SESSIONS && actualSessionsAfterMaxCpu < SESSION_AFTER_FULL_CPU) {
 			try {
 				startNewSession[0].await();
 			} catch (AbortedException e) {
@@ -447,8 +485,18 @@ public class OpenViduLoadTest {
 			startNewSession[0] = new CustomLatch(USERS_SESSION * NUMBER_OF_POLLS);
 			log.info("Stats gathering rounds threshold for session {} reached ({} rounds). Next session scheduled",
 					sessionId, NUMBER_OF_POLLS);
-			this.startSessionBrowserAfterBrowser(sessionIndex + 1);
+
+			this.startSessionBrowserAfterBrowser(sessionIndex + 1, actualSessionsAfterMaxCpu);
 		} else {
+
+			// Wait specified time to stop browsers
+			try {
+				log.info("Waiting {} seconds to end all sessions", SECONDS_WITH_ALL_SESSIONS_ACTIVE);
+				Thread.sleep(SECONDS_WITH_ALL_SESSIONS_ACTIVE * 1000);
+			} catch (InterruptedException e) {
+				log.error("Can't wait for sessions to be active {} seconds", SECONDS_WITH_ALL_SESSIONS_ACTIVE);
+				e.printStackTrace();
+			}
 			log.info("Session limit succesfully reached ({})", SESSIONS);
 			lastBrowserRound.set(true);
 			try {
@@ -531,6 +579,7 @@ public class OpenViduLoadTest {
 			startNewSession[0] = new CustomLatch(USERS_SESSION * NUMBER_OF_POLLS);
 			log.info("Stats gathering rounds threshold for session {} reached ({} rounds). Next session scheduled",
 					sessionId, NUMBER_OF_POLLS);
+
 			this.startSessionAllBrowsersAtOnce(sessionIndex + 1);
 		} else {
 			log.info("Session limit succesfully reached ({})", SESSIONS);

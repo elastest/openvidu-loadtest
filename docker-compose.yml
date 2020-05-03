@@ -1,0 +1,26 @@
+version: '2'
+services:
+  sut:
+    image: maes95/openvidu-server-kms:v1
+    ports:
+      - 8080:8080
+      - 4443:4443
+    environment:
+     - openvidu.secret=MY_SECRET
+    networks:
+      - "elastest_elastest"
+  eus:
+    image: elastest/eus
+    environment:
+      - ET_FILES_PATH_IN_HOST=/tmp
+      - ET_DATA_IN_HOST=/tmp
+      - USE_TORM=true
+    ports:
+      - 8040:8040
+    volumes: 
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - "elastest_elastest"
+networks:
+  elastest_elastest:
+    external: true
