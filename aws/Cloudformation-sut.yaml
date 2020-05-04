@@ -6,7 +6,7 @@
     OpenViduVersion:
       Description: Openvidu Version
       Type: String
-      Default: 2.7.0
+      Default: 2.13.0
     KMSVersion:
       Description: Kurento Media Server Version. Set to nightly for nightly version.
       Type: String
@@ -22,7 +22,7 @@
     ElastestEndpoint:
       Description: Elastest URL and port to send metrics
       Type: String
-      Default: "stable.elastest.io:37502"
+      Default: stable.elastest.io:37502
     InstanceType:
       Description: "EC2 Instance type"
       Type: String
@@ -257,7 +257,7 @@
                 owner: "root"
                 group: "root"
               "/etc/filebeat/filebeat-elastest.yml":
-                content: |
+                content: !Sub |
                   #====== "filebeat.yml" to send to ElasTest the logs generated on "/path/to/MY_CUSTOM_LOG.log" ======
                   filebeat.prospectors:
                   - type: log
@@ -277,7 +277,7 @@
                 owner: "root"
                 group: "root"
               "/etc/metricbeat/metricbeat-elastest.yml":
-                content: |
+                content: !Sub |
                   #====== "metricbeat.yml" to send to ElasTest the cpu usage of our server ======
 
                   metricbeat.modules:
