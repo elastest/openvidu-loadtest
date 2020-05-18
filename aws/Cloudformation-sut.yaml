@@ -3,6 +3,10 @@
   Description: Openvidu Server CloudFormation AMI template.
   
   Parameters:
+    AMIID:
+      Description: Ubuntu AMI ID (default - Ireland)
+      Type: String
+      Default: ami-0f2ed58082cb08a4d
     OpenViduVersion:
       Description: Openvidu Version
       Type: String
@@ -303,7 +307,7 @@
                 owner: "root"
                 group: "root"
       Properties:
-        ImageId:  "ami-039a49e70ea773ffc"
+        ImageId:  !Ref AMIID
         InstanceType: !Ref InstanceType
         SecurityGroups:
           - !Ref OpenviduServerSecurityGroup
